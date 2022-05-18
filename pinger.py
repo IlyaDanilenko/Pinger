@@ -1,12 +1,12 @@
 from pythonping import ping
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QListWidget, QListWidgetItem
+from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout
 from pyqtgraph import PlotWidget
 import pyqtgraph as pg
 import json, sys
 
-FONT_SIZE = 40 # размер шрифта
+FONT_SIZE = 80 # размер шрифта
 TIME = 1000 # врремя пинга (в мс)
 SCALE = 50 # сколько точек показывается
 GREEN_RANGE = 100 # до скольки пинг считатеся целеным (в мс)
@@ -17,7 +17,7 @@ GRAPHIC_COLOR = (0, 0, 0) # цвет графика (R, G, B)
 GRAPHIC_WIDTH = 5 # толщина линии
 
 def get_time_by_ip(ip):
-    return round(ping(ip, count=1)._responses[0].time_elapsed_ms, 3)
+    return int(ping(ip, count=1)._responses[0].time_elapsed_ms)
 
 class Device:
     def __init__(self, name, ip):
@@ -52,16 +52,24 @@ class PingWidget(QWidget):
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
 
-        layout = QGridLayout(self)
+        main_layout = QGridLayout(self)
+        w = QWidget()
+        layout = QGridLayout(w)
+        w.setLayout(layout)
 
-        positions = [(i,j) for i in range(1) for j in range(4)]
+        main_layout.addWidget(w, 0, 0)
+        main_layout.addWidget(self.__widgets[-1], 0, 1)
 
-        layout.setRowStretch(0, 1)
+        positions = [(i,j) for i in range(1) for j in range(3)]
+
+        # layout.setRowStretch(0, 1)
         for position, widget in zip(positions, self.__widgets):
             widget.setFont(self.__font)
             layout.addWidget(widget, *position)
             layout.setColumnStretch(positions.index(position), 1)
-        self.setLayout(layout)
+        layout.setColumnStretch(len(positions) -1, 0)
+        
+        self.setLayout(main_layout)
         self.show()
 
     def update_plot_data(self):
@@ -82,7 +90,7 @@ class PingWidget(QWidget):
         if time == 2000:
             self.__widgets[-2].setText("NA")
         else:
-            self.__widgets[-2].setText(f"{time} ms")
+            self.__widgets[-2].setText(f" {time}")
 
         self.data_line.setData(self.x, self.y)
 
