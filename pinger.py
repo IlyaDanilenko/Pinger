@@ -6,7 +6,6 @@ from pyqtgraph import PlotWidget
 import pyqtgraph as pg
 import json, sys
 
-FONT_SIZE = 80 # размер шрифта
 TIME = 1000 # врремя пинга (в мс)
 SCALE = 50 # сколько точек показывается
 GREEN_RANGE = 100 # до скольки пинг считатеся целеным (в мс)
@@ -31,21 +30,23 @@ class PingWidget(QWidget):
 
         self.setAutoFillBackground(True)
 
-        self.__font = QFont('Times', FONT_SIZE)
-        self.__widgets = [
-            QLabel(self.__device.name),
-            QLabel(self.__device.ip),
-            QLabel("NA", self),
-            PlotWidget(self)
-        ]
+        names_font = QFont('Monospace', 30)
+        self.name_label = QLabel(self.__device.name)
+        self.name_label.setFont(names_font)
+        self.ip_label = QLabel(self.__device.ip.ljust(16))
+        self.ip_label.setFont(names_font)
+
+        self.ping_label = QLabel("NA".ljust(4), self)
+        self.ping_label.setFont(QFont('Monospace', 80))
+        self.graph = PlotWidget(self)
 
         self.pen = pg.mkPen(color=GRAPHIC_COLOR, width=GRAPHIC_WIDTH)
 
         self.x = list(range(SCALE))
         self.y = [0 for _ in range(SCALE)]
 
-        self.__widgets[-1].setBackground('w')
-        self.data_line =  self.__widgets[-1].plot(self.x, self.y, pen=self.pen)
+        self.graph.setBackground('w')
+        self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
         self.timer = QtCore.QTimer()
         self.timer.setInterval(TIME)
@@ -56,19 +57,19 @@ class PingWidget(QWidget):
         w = QWidget()
         layout = QGridLayout(w)
         w.setLayout(layout)
+        w1 = QWidget()
+        name_layout = QGridLayout(w1)
+        w1.setLayout(name_layout)
+
+        name_layout.addWidget(self.name_label, 0, 0)
+        name_layout.addWidget(self.ip_label, 1, 0)
+
+        layout.addWidget(w1, 0, 0)
+        layout.addWidget(self.ping_label, 0, 1)
 
         main_layout.addWidget(w, 0, 0)
-        main_layout.addWidget(self.__widgets[-1], 0, 1)
+        main_layout.addWidget(self.graph, 0, 1)
 
-        positions = [(i,j) for i in range(1) for j in range(3)]
-
-        # layout.setRowStretch(0, 1)
-        for position, widget in zip(positions, self.__widgets):
-            widget.setFont(self.__font)
-            layout.addWidget(widget, *position)
-            layout.setColumnStretch(positions.index(position), 1)
-        layout.setColumnStretch(len(positions) -1, 0)
-        
         self.setLayout(main_layout)
         self.show()
 
@@ -88,9 +89,9 @@ class PingWidget(QWidget):
         self.y.append(time)
 
         if time == 2000:
-            self.__widgets[-2].setText("NA")
+            self.ping_label.setText("NA".ljust(4))
         else:
-            self.__widgets[-2].setText(f" {time}")
+            self.ping_label.setText(f"{time}".ljust(4))
 
         self.data_line.setData(self.x, self.y)
 
@@ -98,7 +99,6 @@ class PingWidget(QWidget):
         p = self.palette()
         p.setColor(self.backgroundRole(), color)
         self.setPalette(p)
-
 
 class MainWindow(QWidget):
     def __init__(self, screen, config_file):
