@@ -1,12 +1,14 @@
-from pythonping import ping
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
 from pyqtgraph import PlotWidget
 import pyqtgraph as pg
-import json, sys
+from threading import Thread
+import json, sys, ping3
+ping3.EXCEPTIONS = True
 
-TIME = 1000 # врремя пинга (в мс)
+TIME = 1000 # время пинга (в мс)
 SCALE = 50 # сколько точек показывается
 GREEN_RANGE = 100 # до скольки пинг считатеся целеным (в мс)
 YELLOW_RANGE = 300 # до скольки пинг считается желтым (в мс)
@@ -16,7 +18,10 @@ GRAPHIC_COLOR = (0, 0, 0) # цвет графика (R, G, B)
 GRAPHIC_WIDTH = 5 # толщина линии
 
 def get_time_by_ip(ip):
-    return int(ping(ip, count=1)._responses[0].time_elapsed_ms)
+    try:
+        return int(ping3.ping(ip, timeout=(TIME-100)*0.001) * 1000)
+    except:
+        return None
 
 class Device:
     def __init__(self, name, ip):
@@ -39,6 +44,7 @@ class PingWidget(QWidget):
         self.ping_label = QLabel("NA".ljust(4), self)
         self.ping_label.setFont(QFont('Monospace', 80))
         self.graph = PlotWidget(self)
+        self.graph.setMouseEnabled(False, False)
 
         self.pen = pg.mkPen(color=GRAPHIC_COLOR, width=GRAPHIC_WIDTH)
 
@@ -50,7 +56,7 @@ class PingWidget(QWidget):
 
         self.timer = QtCore.QTimer()
         self.timer.setInterval(TIME)
-        self.timer.timeout.connect(self.update_plot_data)
+        self.timer.timeout.connect(self.__timer_handle)
         self.timer.start()
 
         main_layout = QGridLayout(self)
@@ -73,6 +79,9 @@ class PingWidget(QWidget):
         self.setLayout(main_layout)
         self.show()
 
+    def __timer_handle(self):
+        Thread(target=self.update_plot_data).start()
+
     def update_plot_data(self):
         self.x = self.x[1:]
         self.x.append(self.x[-1] + 1)
@@ -80,18 +89,18 @@ class PingWidget(QWidget):
         self.y = self.y[1:]
 
         time = get_time_by_ip(self.__device.ip)
-        if time <= GREEN_RANGE:
-            self.__change_color(QColor(0, 255, 0))
-        elif time <= YELLOW_RANGE:
-            self.__change_color(QColor(255, 255, 0))
-        else:
-            self.__change_color(QColor(255, 0, 0))
-        self.y.append(time)
-
-        if time == 2000:
+        if time is None:
             self.ping_label.setText("NA".ljust(4))
+            self.__change_color(QColor(255, 0, 0))
+            time = -1
         else:
+            if time <= GREEN_RANGE:
+                self.__change_color(QColor(0, 255, 0))
+            elif time <= YELLOW_RANGE:
+                self.__change_color(QColor(255, 255, 0))
             self.ping_label.setText(f"{time}".ljust(4))
+
+        self.y.append(time)
 
         self.data_line.setData(self.x, self.y)
 
@@ -100,19 +109,30 @@ class PingWidget(QWidget):
         p.setColor(self.backgroundRole(), color)
         self.setPalette(p)
 
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     def __init__(self, screen, config_file):
         self.__config_file = config_file
         self.__devices = []
         self.__load()
         super().__init__()
         self.setGeometry(screen)
-        layout = QVBoxLayout()
 
+        widget = QWidget()
+        widget.setGeometry(screen)
+
+        layout = QVBoxLayout()
         for device in self.__devices:
             deviceWidget = PingWidget(device)
             layout.addWidget(deviceWidget)
-        self.setLayout(layout)
+
+        widget.setLayout(layout)
+        scroll = QScrollArea()
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(widget)
+
+        self.setCentralWidget(scroll)
 
     def __load(self):
         with open(self.__config_file) as f:

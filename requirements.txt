@@ -1,3 +1,3 @@
-pythonping
+ping3
 PyQt5
 pyqtgraph

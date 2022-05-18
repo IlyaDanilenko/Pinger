@@ -4,8 +4,8 @@
         "ip": "google.com"
     },
     {
-        "name": "kek",
-        "ip": "127.0.0.1"
+        "name": "not_exist",
+        "ip": "not.exist.com"
     },
     {
         "name": "kek",
