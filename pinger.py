@@ -136,7 +136,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(scroll)
 
     def keyReleaseEvent(self, event):
-        print(event.key())
         if event.key() == Qt.Key_Escape:
             self.close()
 
