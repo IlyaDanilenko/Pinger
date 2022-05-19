@@ -34,6 +34,7 @@ class PingWidget(QWidget):
         super().__init__()
 
         self.setAutoFillBackground(True)
+        self.__change_color(QColor(255, 0, 0))
 
         names_font = QFont('Monospace', 30)
         self.name_label = QLabel(self.__device.name)
@@ -83,11 +84,6 @@ class PingWidget(QWidget):
         Thread(target=self.update_plot_data).start()
 
     def update_plot_data(self):
-        self.x = self.x[1:]
-        self.x.append(self.x[-1] + 1)
-
-        self.y = self.y[1:]
-
         time = get_time_by_ip(self.__device.ip)
         if time is None:
             self.ping_label.setText("NA".ljust(4))
@@ -99,6 +95,11 @@ class PingWidget(QWidget):
             elif time <= YELLOW_RANGE:
                 self.__change_color(QColor(255, 255, 0))
             self.ping_label.setText(f"{time}".ljust(4))
+
+        self.x = self.x[1:]
+        self.x.append(self.x[-1] + 1)
+
+        self.y = self.y[1:]
 
         self.y.append(time)
 
@@ -133,6 +134,11 @@ class MainWindow(QMainWindow):
         scroll.setWidget(widget)
 
         self.setCentralWidget(scroll)
+
+    def keyReleaseEvent(self, event):
+        print(event.key())
+        if event.key() == Qt.Key_Escape:
+            self.close()
 
     def __load(self):
         with open(self.__config_file) as f:
