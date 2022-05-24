@@ -8,7 +8,10 @@ from threading import Thread
 import json, sys, ping3
 ping3.EXCEPTIONS = True
 
+SYNC = True # синхронизируются ли пинги
+
 TIME = 1000 # время пинга (в мс)
+TIMEOUT = TIME - 200
 SCALE = 50 # сколько точек показывается
 GREEN_RANGE = 100 # до скольки пинг считатеся целеным (в мс)
 YELLOW_RANGE = 300 # до скольки пинг считается желтым (в мс)
@@ -19,7 +22,7 @@ GRAPHIC_WIDTH = 5 # толщина линии
 
 def get_time_by_ip(ip):
     try:
-        return int(ping3.ping(ip, timeout=(TIME-100)*0.001) * 1000)
+        return int(ping3.ping(ip, timeout=TIMEOUT * 0.001) * 1000)
     except:
         return None
 
@@ -84,14 +87,17 @@ class PingWidget(QWidget):
         self.show()
 
     def __timer_handle(self):
-        Thread(target=self.update_plot_data).start()
+        if SYNC:
+            self.update_plot_data()
+        else:
+            Thread(target=self.update_plot_data).start()
 
     def update_plot_data(self):
         time = get_time_by_ip(self.__device.ip)
         if time is None:
             self.ping_label.setText("NA".ljust(4))
             self.__change_color(QColor(255, 0, 0))
-            time = -1
+            time = TIMEOUT
         else:
             if time <= GREEN_RANGE:
                 self.__change_color(QColor(0, 255, 0))
