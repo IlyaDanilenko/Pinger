@@ -1,9 +1,7 @@
-from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
-from pyqtgraph import PlotWidget
-import pyqtgraph as pg
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
+from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
 import json, sys, ping3
 ping3.EXCEPTIONS = True
@@ -12,13 +10,14 @@ SYNC = True # синхронизируются ли пинги
 
 TIME = 1000 # время пинга (в мс)
 TIMEOUT = TIME - 200 # время после которого устройство считается недоступным
-SCALE = 50 # сколько точек показывается
+SCALE = 200 # сколько точек показывается
 GREEN_RANGE = 100 # до скольки пинг считатеся целеным (в мс)
 YELLOW_RANGE = 300 # до скольки пинг считается желтым (в мс)
 # красный все остальные значения времени
 
 GRAPHIC_COLOR = (0, 0, 0) # цвет графика (R, G, B)
 GRAPHIC_WIDTH = 5 # толщина линии
+SHOW_X_AXIS = False # показывать ли значения по оси X
 
 def get_time_by_ip(ip):
     try:
@@ -53,15 +52,18 @@ class PingWidget(QWidget):
         self.graph = PlotWidget(self)
         self.graph.setMouseEnabled(False, False)
 
-        self.pen = pg.mkPen(color=GRAPHIC_COLOR, width=GRAPHIC_WIDTH)
+        self.pen = mkPen(color=GRAPHIC_COLOR, width=GRAPHIC_WIDTH)
 
         self.x = list(range(SCALE))
         self.y = [0 for _ in range(SCALE)]
 
         self.graph.setBackground('w')
+        if not SHOW_X_AXIS:
+            new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
+            self.graph.getPlotItem().setAxisItems(new_axis)
         self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
-        self.timer = QtCore.QTimer()
+        self.timer = QTimer()
         self.timer.setInterval(TIME)
         self.timer.timeout.connect(self.__timer_handle)
         self.timer.start()
@@ -123,17 +125,19 @@ class MainWindow(QMainWindow):
     def __init__(self, screen, config_file):
         self.__config_file = config_file
         self.__devices = []
+        self.__screen = screen
         self.__load()
+
         super().__init__()
 
-        self.setGeometry(screen)
+        self.setGeometry(self.__screen )
 
         widget = QWidget()
-        widget.setGeometry(screen)
+        widget.setGeometry(self.__screen )
 
         layout = QVBoxLayout()
         for device in self.__devices:
-            deviceWidget = PingWidget(device, screen, len(self.__devices))
+            deviceWidget = PingWidget(device, self.__screen , len(self.__devices))
             layout.addWidget(deviceWidget)
 
         widget.setLayout(layout)
@@ -148,6 +152,11 @@ class MainWindow(QMainWindow):
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self.close()
+        elif event.key() == Qt.Key_F:
+            if self.isFullScreen():
+                self.showMaximized()
+            else:
+                self.showFullScreen()
 
     def __load(self):
         with open(self.__config_file) as f:
@@ -156,7 +165,7 @@ class MainWindow(QMainWindow):
                 self.__devices.append(Device(**obj))
                 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     main = MainWindow(app.desktop().screenGeometry(), "config/config.json")
     main.show()
     sys.exit(app.exec_())
