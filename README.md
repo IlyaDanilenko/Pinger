@@ -9,7 +9,7 @@ git clone https://github.com/IlyaDanilenko/Pinger.git
 2. Устанавливаем необходимые библиотеки Python
 ```
 cd Pinger
-sudo pip3 install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ## Настройка
@@ -17,7 +17,7 @@ sudo pip3 install -r requirements.txt
 
 ## Запуск программы
 ```
-sudo python3 pinger.py
+python3 pinger.py
 ```
 
 ## Управление
