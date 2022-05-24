@@ -29,21 +29,24 @@ class Device:
         self.ip = ip
 
 class PingWidget(QWidget):
-    def __init__(self, device):
+    def __init__(self, device, screen, count):
         self.__device = device
+
+        size = screen.height() // count // 3
+
         super().__init__()
 
         self.setAutoFillBackground(True)
         self.__change_color(QColor(255, 0, 0))
 
-        names_font = QFont('Monospace', 30)
+        names_font = QFont('Monospace', int(size * 0.375))
         self.name_label = QLabel(self.__device.name)
         self.name_label.setFont(names_font)
         self.ip_label = QLabel(self.__device.ip.ljust(16))
         self.ip_label.setFont(names_font)
 
         self.ping_label = QLabel("NA".ljust(4), self)
-        self.ping_label.setFont(QFont('Monospace', 80))
+        self.ping_label.setFont(QFont('Monospace', size))
         self.graph = PlotWidget(self)
         self.graph.setMouseEnabled(False, False)
 
@@ -116,6 +119,7 @@ class MainWindow(QMainWindow):
         self.__devices = []
         self.__load()
         super().__init__()
+
         self.setGeometry(screen)
 
         widget = QWidget()
@@ -123,7 +127,7 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         for device in self.__devices:
-            deviceWidget = PingWidget(device)
+            deviceWidget = PingWidget(device, screen, len(self.__devices))
             layout.addWidget(deviceWidget)
 
         widget.setLayout(layout)
