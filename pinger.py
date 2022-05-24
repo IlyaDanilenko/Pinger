@@ -18,6 +18,7 @@ YELLOW_RANGE = 300 # до скольки пинг считается желты�
 GRAPHIC_COLOR = (0, 0, 0) # цвет графика (R, G, B)
 GRAPHIC_WIDTH = 5 # толщина линии
 SHOW_X_AXIS = False # показывать ли значения по оси X
+SCROLL = False # Полоска скрола
 
 def get_time_by_ip(ip):
     try:
@@ -141,13 +142,17 @@ class MainWindow(QMainWindow):
             layout.addWidget(deviceWidget)
 
         widget.setLayout(layout)
-        scroll = QScrollArea()
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(widget)
 
-        self.setCentralWidget(scroll)
+        if SCROLL:
+            scroll = QScrollArea()
+            scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            scroll.setWidgetResizable(True)
+            scroll.setWidget(widget)
+
+            self.setCentralWidget(scroll)
+        else:
+            self.setCentralWidget(widget)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Escape:
