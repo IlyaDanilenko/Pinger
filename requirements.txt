@@ -1,3 +1,4 @@
 ping3
 PyQt5
 pyqtgraph
+requests

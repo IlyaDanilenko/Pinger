@@ -3,10 +3,11 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
-import json, sys, ping3
+import json, sys, ping3, requests
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
+URL = "http://10.10.0.166:8081/?action=stat"
 TIME = 1000 # время пинга (в мс)
 TIMEOUT = TIME - 200 # время после которого устройство считается недоступным
 SCALE = 200 # сколько точек показывается
@@ -17,7 +18,6 @@ YELLOW_RANGE = 300 # до скольки пинг считается желты�
 GRAPHIC_COLOR = (0, 0, 0) # цвет графика (R, G, B)
 GRAPHIC_WIDTH = 5 # толщина линии
 SHOW_X_AXIS = False # показывать ли значения по оси X
-SCROLL = False # Полоска скрола
 
 class Device:
     def __init__(self, name, ip):
@@ -33,15 +33,42 @@ class PingThread(Thread):
 
     def run(self):
         while self.__run:
-            self.result, delta = self.get_time_by_ip()
+            self.result, delta = self.get_data()
             sleep(1 - delta)
 
-    def get_time_by_ip(self):
+    def get_data(self):
         start = time()
         try:
             return int(ping3.ping(self.__ip, timeout=TIMEOUT * 0.001) * 1000), time() - start
         except:
             return None, time() - start
+
+    def stop(self):
+        self.__run = False
+
+class RequestThread(Thread):
+    def __init__(self, url):
+        self.result = {
+            "streams_webrtc_out": 0,
+            "connections": 0,
+            "streams_rtsp_in": 0
+        }
+        self.url = url
+        self.__run = True
+        super().__init__()
+
+    def run(self):
+        while self.__run:
+            self.result, delta = self.get_stat_by_url()
+            sleep(1 - delta)
+    
+    def get_stat_by_url(self):
+        result = self.result.copy()
+        start = time()
+        res = requests.get(self.url).text.split("=")
+        for key in self.result.keys():
+            result[key] = res[res.index(key) + 1].replace("\n", "")
+        return result, time() - start
 
     def stop(self):
         self.__run = False
@@ -140,7 +167,7 @@ class PingWidget(QWidget):
         self.data_line.setData(self.x, self.y)
 
     def __get_ping_str(self, value1, value2, count):
-        return str(value1).ljust(count) + "\\" + str(value2).ljust(count)
+        return str(value1).ljust(count) + " " + str(value2).ljust(count)
 
     def __change_color(self, color):
         p = self.palette()
@@ -154,6 +181,85 @@ class PingWidget(QWidget):
     def close_connection(self):
         self.__ping_thread.stop()
 
+class ReqWidget(QWidget):
+    def __init__(self, url_thread, key, screen, count):
+        size = screen.height() // count // 10
+        self.key = key
+        self.url_thread = url_thread
+
+        super().__init__()
+        names_font = QFont('Monospace', int(size))
+        self.name_label = QLabel(key.ljust(20))
+        self.name_label.setFont(names_font)
+
+        self.graph = PlotWidget(self)
+        self.graph.setMouseEnabled(False, False)
+
+        self.pen = mkPen(color=GRAPHIC_COLOR, width=GRAPHIC_WIDTH)
+
+        self.x = list(range(SCALE))
+        self.y = [0 for _ in range(SCALE)]
+
+        self.graph.setBackground('w')
+        if not SHOW_X_AXIS:
+            new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
+            self.graph.getPlotItem().setAxisItems(new_axis)
+        self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
+
+        self.timer = QTimer()
+        self.timer.setInterval(TIME)
+        self.timer.timeout.connect(self.__timer_handle)
+        self.timer.start()
+
+        main_layout = QGridLayout(self)
+        main_layout.addWidget(self.name_label, 0, 0)
+        main_layout.addWidget(self.graph, 0, 1)
+
+        self.setLayout(main_layout)
+        self.show()
+
+    def __timer_handle(self):
+        Thread(target=self.update_plot_data).start()
+
+    def update_plot_data(self):
+        self.x = self.x[1:]
+        self.x.append(self.x[-1] + 1)
+
+        self.y = self.y[1:]
+
+        self.y.append(self.url_thread.result[self.key])
+
+        self.data_line.setData(self.x, self.y)
+
+class ReqWindow(QMainWindow):
+    def __init__(self, screen, url):
+        super().__init__()
+        self.__screen = screen
+        self.__graph_widgets = []
+        self.__thread = RequestThread(url)
+
+        self.setGeometry(self.__screen )
+
+        widget = QWidget()
+        widget.setGeometry(self.__screen )
+
+        layout = QVBoxLayout()
+
+        for key in self.__thread.result.keys():
+            self.__graph_widgets.append(ReqWidget(self.__thread, key, screen, len(self.__thread.result)))
+            layout.addWidget(self.__graph_widgets[-1])
+
+        widget.setLayout(layout)
+
+        self.setCentralWidget(widget)
+
+    def close_connection(self):
+        self.__thread.stop()
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key_O:
+            self.hide()
+
 class MainWindow(QMainWindow):
     def __init__(self, screen, config_file):
         self.__config_file = config_file
@@ -164,10 +270,10 @@ class MainWindow(QMainWindow):
 
         super().__init__()
 
-        self.setGeometry(self.__screen )
+        self.setGeometry(self.__screen)
 
         widget = QWidget()
-        widget.setGeometry(self.__screen )
+        widget.setGeometry(self.__screen)
 
         layout = QVBoxLayout()
         for device in self.__devices:
@@ -175,23 +281,17 @@ class MainWindow(QMainWindow):
             layout.addWidget(self.__devices_widget[-1])
 
         widget.setLayout(layout)
+        self.setCentralWidget(widget)
 
-        if SCROLL:
-            scroll = QScrollArea()
-            scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            scroll.setWidgetResizable(True)
-            scroll.setWidget(widget)
-
-            self.setCentralWidget(scroll)
-        else:
-            self.setCentralWidget(widget)
+        self.urler = ReqWindow(self.__screen, URL)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self.close()
             for index in range(len(self.__devices_widget)):
                 self.__devices_widget[index].close_connection()
+            self.urler.close()
+            self.urler.close_connection()
         elif event.key() == Qt.Key_F:
             if self.isFullScreen():
                 self.showMaximized()
@@ -200,6 +300,8 @@ class MainWindow(QMainWindow):
         elif event.key() == Qt.Key_Z:
             for index in range(len(self.__devices_widget)):
                 self.__devices_widget[index].zero_mid()
+        elif event.key() == Qt.Key_O:
+            self.urler.show()
 
     def __load(self):
         with open(self.__config_file) as f:
@@ -209,6 +311,6 @@ class MainWindow(QMainWindow):
                 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    main = MainWindow(app.desktop().screenGeometry(), "config/config.json")
-    main.show()
+    ping = MainWindow(app.desktop().screenGeometry(), "config/config.json")
+    ping.show()
     sys.exit(app.exec_())
