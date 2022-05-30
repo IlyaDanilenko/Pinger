@@ -1,13 +1,13 @@
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel, QVBoxLayout, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
 import json, sys, ping3, requests
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
-URL = "http://10.10.0.166:8081/?action=stat&format=json"
+URL = "http://10.10.0.166:8081/?action=stat&format=json" # ссылка откуда необходимо забрать данные
 TIME = 1000 # время пинга (в мс)
 TIMEOUT = TIME - 200 # время после которого устройство считается недоступным
 SCALE = 200 # сколько точек показывается
