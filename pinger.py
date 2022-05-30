@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
-import json, sys, ping3, requests
+import json, sys, ping3, requests, json
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
@@ -65,9 +65,17 @@ class RequestThread(Thread):
     def get_stat_by_url(self):
         result = self.result.copy()
         start = time()
-        res = requests.get(self.url).text.split("=")
-        for key in self.result.keys():
-            result[key] = res[res.index(key) + 1].replace("\n", "")
+        try:
+            res = json.loads(requests.get(self.url, timeout=TIMEOUT * 0.001).text)
+            for key in self.result.keys():
+                for _, value in res.items():
+                    try:
+                        result[key] = value[key]
+                        break
+                    except:
+                        pass
+        except:
+            pass
         return result, time() - start
 
     def stop(self):
@@ -183,7 +191,7 @@ class PingWidget(QWidget):
 
 class ReqWidget(QWidget):
     def __init__(self, url_thread, key, screen, count):
-        size = screen.height() // count // 10
+        size = screen.height() // count // 12
         self.key = key
         self.url_thread = url_thread
 
@@ -191,6 +199,9 @@ class ReqWidget(QWidget):
         names_font = QFont('Monospace', int(size))
         self.name_label = QLabel(key.ljust(20))
         self.name_label.setFont(names_font)
+
+        self.data_label = QLabel("0".ljust(4), self)
+        self.data_label.setFont(QFont('Monospace', size))
 
         self.graph = PlotWidget(self)
         self.graph.setMouseEnabled(False, False)
@@ -211,8 +222,14 @@ class ReqWidget(QWidget):
         self.timer.timeout.connect(self.__timer_handle)
         self.timer.start()
 
+        w = QWidget()
+        w_layout = QGridLayout(w)
+        w_layout.addWidget(self.name_label, 0, 0)
+        w_layout.addWidget(self.data_label, 0, 1)
+        w.setLayout(w_layout)
+
         main_layout = QGridLayout(self)
-        main_layout.addWidget(self.name_label, 0, 0)
+        main_layout.addWidget(w, 0, 0)
         main_layout.addWidget(self.graph, 0, 1)
 
         self.setLayout(main_layout)
@@ -222,13 +239,15 @@ class ReqWidget(QWidget):
         Thread(target=self.update_plot_data).start()
 
     def update_plot_data(self):
+        result = self.url_thread.result[self.key]
         self.x = self.x[1:]
         self.x.append(self.x[-1] + 1)
 
         self.y = self.y[1:]
 
-        self.y.append(self.url_thread.result[self.key])
+        self.y.append(result)
 
+        self.data_label.setText(str(result).ljust(4))
         self.data_line.setData(self.x, self.y)
 
 class ReqWindow(QMainWindow):
@@ -237,6 +256,7 @@ class ReqWindow(QMainWindow):
         self.__screen = screen
         self.__graph_widgets = []
         self.__thread = RequestThread(url)
+        self.__thread.start()
 
         self.setGeometry(self.__screen )
 
@@ -257,7 +277,7 @@ class ReqWindow(QMainWindow):
         self.__thread.stop()
 
     def keyReleaseEvent(self, event):
-        if event.key() == Qt.Key_O:
+        if event.key() == Qt.Key_1:
             self.hide()
 
 class MainWindow(QMainWindow):
@@ -300,7 +320,7 @@ class MainWindow(QMainWindow):
         elif event.key() == Qt.Key_Z:
             for index in range(len(self.__devices_widget)):
                 self.__devices_widget[index].zero_mid()
-        elif event.key() == Qt.Key_O:
+        elif event.key() == Qt.Key_1:
             self.urler.show()
 
     def __load(self):
