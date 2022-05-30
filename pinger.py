@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
-import json, sys, ping3, requests, json
+import json, sys, ping3, requests
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
@@ -47,12 +47,10 @@ class PingThread(Thread):
         self.__run = False
 
 class RequestThread(Thread):
-    def __init__(self, url):
-        self.result = {
-            "streams_webrtc_out": 0,
-            "connections": 0,
-            "streams_rtsp_in": 0
-        }
+    def __init__(self, url, config_names):
+        self.result = {}
+        for name in config_names:
+            self.result[name] = 0
         self.url = url
         self.__run = True
         super().__init__()
@@ -251,11 +249,11 @@ class ReqWidget(QWidget):
         self.data_line.setData(self.x, self.y)
 
 class ReqWindow(QMainWindow):
-    def __init__(self, screen, url):
+    def __init__(self, screen, config_file, url):
         super().__init__()
         self.__screen = screen
         self.__graph_widgets = []
-        self.__thread = RequestThread(url)
+        self.__thread = RequestThread(url, self.get_names_from_config(config_file))
         self.__thread.start()
 
         self.setGeometry(self.__screen )
@@ -280,6 +278,11 @@ class ReqWindow(QMainWindow):
         if event.key() == Qt.Key_1:
             self.hide()
 
+    def get_names_from_config(self, config_file):
+        with open(config_file) as f:
+            return json.load(f)['request']
+
+
 class MainWindow(QMainWindow):
     def __init__(self, screen, config_file):
         self.__config_file = config_file
@@ -303,7 +306,7 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
-        self.urler = ReqWindow(self.__screen, URL)
+        self.urler = ReqWindow(self.__screen, config_file, URL)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -326,7 +329,7 @@ class MainWindow(QMainWindow):
     def __load(self):
         with open(self.__config_file) as f:
             json_data = json.load(f)
-            for obj in json_data:
+            for obj in json_data['ping']:
                 self.__devices.append(Device(**obj))
                 
 if __name__ == '__main__':
