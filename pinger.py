@@ -66,7 +66,7 @@ class PingWidget(QWidget):
         self.ip_label = QLabel(self.__device.ip.ljust(16))
         self.ip_label.setFont(names_font)
 
-        self.ping_label = QLabel("NA".rjust(3) + "\\" + "NA".ljust(3), self)
+        self.ping_label = QLabel(self.__get_ping_str("NA", "NA", 3), self)
         self.ping_label.setFont(QFont('Monospace', size))
         self.graph = PlotWidget(self)
         self.graph.setMouseEnabled(False, False)
@@ -119,7 +119,7 @@ class PingWidget(QWidget):
             time = TIMEOUT
             self.__sum += time
             self.__count += 1
-            self.ping_label.setText("NA".rjust(3) + "\\" + str(self.__sum // self.__count).ljust(3))
+            self.ping_label.setText(self.__get_ping_str("NA", self.__sum // self.__count, 3))
             self.__change_color(QColor(255, 0, 0))
         else:
             self.__sum += time
@@ -128,7 +128,7 @@ class PingWidget(QWidget):
                 self.__change_color(QColor(0, 255, 0))
             elif time <= YELLOW_RANGE:
                 self.__change_color(QColor(255, 255, 0))
-            self.ping_label.setText(str(time).rjust(3) + "\\" + str(self.__sum // self.__count).ljust(3))
+            self.ping_label.setText(self.__get_ping_str(time, self.__sum // self.__count, 3))
 
         self.x = self.x[1:]
         self.x.append(self.x[-1] + 1)
@@ -138,6 +138,9 @@ class PingWidget(QWidget):
         self.y.append(time)
 
         self.data_line.setData(self.x, self.y)
+
+    def __get_ping_str(self, value1, value2, count):
+        return str(value1).ljust(count) + "\\" + str(value2).ljust(count)
 
     def __change_color(self, color):
         p = self.palette()
