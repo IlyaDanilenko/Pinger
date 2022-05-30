@@ -7,7 +7,7 @@ import json, sys, ping3, requests, json
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
-URL = "http://10.10.0.166:8081/?action=stat"
+URL = "http://10.10.0.166:8081/?action=stat&format=json"
 TIME = 1000 # время пинга (в мс)
 TIMEOUT = TIME - 200 # время после которого устройство считается недоступным
 SCALE = 200 # сколько точек показывается
