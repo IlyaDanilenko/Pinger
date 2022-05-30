@@ -1,6 +1,6 @@
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QScrollArea, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel,QVBoxLayout, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
 import json, sys, ping3, requests
