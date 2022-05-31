@@ -37,16 +37,16 @@
     "request":
     [
         {
+            "name": "connections",
+            "help": "Общее количество соединений"
+        },
+        {
             "name": "streams_webrtc_out",
             "help": "Количество активных потоков, воспроизводимых через WebRTC"
         },
         {
             "name": "streams_rtsp_in",
             "help": "Количество активных RTSP-сессий, раздающих трафик"
-        },
-        {
-            "name": "connections",
-            "help": "Общее количество соединений"
         },
         {
             "name": "ports_media_free",

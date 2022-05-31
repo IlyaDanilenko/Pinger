@@ -150,8 +150,8 @@ class PingWidget(QWidget):
         name_layout = QGridLayout(w1)
         w1.setLayout(name_layout)
 
-        name_layout.addWidget(self.name_label, 0, 0)
-        name_layout.addWidget(self.ip_label, 1, 0)
+        layout.addWidget(self.name_label, 0, 0)
+        layout.addWidget(self.ip_label, 1, 0)
 
         layout.addWidget(w1, 0, 0)
         layout.addWidget(self.ping_label, 0, 1)
@@ -220,8 +220,6 @@ class ReqWidget(QWidget):
         self.setPalette(p)
 
         names_font = QFont('Monospace', int(size * 0.25))
-        self.param_label = QLabel(self.key.ljust(64))
-        self.param_label.setFont(names_font)
         self.help_label = QLabel(param.help.ljust(64))
         self.help_label.setFont(names_font)
 
@@ -250,15 +248,9 @@ class ReqWidget(QWidget):
         w = QWidget()
         w_layout = QGridLayout(w)
         w.setLayout(w_layout)
-        w1 = QWidget()
-        name_layout = QGridLayout(w1)
-        w1.setLayout(name_layout)
 
-        name_layout.addWidget(self.param_label, 0, 0)
-        name_layout.addWidget(self.help_label, 1, 0)
-
-        w_layout.addWidget(w1, 0, 0)
-        w_layout.addWidget(self.data_label, 0, 1)
+        w_layout.addWidget(self.data_label, 0, 0)
+        w_layout.addWidget(self.help_label, 1, 0)
 
         main_layout = QGridLayout(self)
         main_layout.addWidget(w, 0, 0)
