@@ -273,7 +273,7 @@ class ReqWidget(QWidget):
 
         self.y.append(result)
 
-        print(self.key, self.y)
+        # print(self.key, self.y)
 
         self.data_label.setText(str(result).ljust(8))
         self.data_line.setData(self.x, self.y)
