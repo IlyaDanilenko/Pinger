@@ -303,7 +303,7 @@ class ReqWindow(QMainWindow):
         layout = QVBoxLayout()
 
         for param in self.__params:
-            self.__graph_widgets.append(ReqWidget(self.__thread, param, screen, len(self.__params), 200))
+            self.__graph_widgets.append(ReqWidget(self.__thread, param, screen, len(self.__params), 50))
             layout.addWidget(self.__graph_widgets[-1])
 
         widget.setLayout(layout)
