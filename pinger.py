@@ -219,12 +219,12 @@ class ReqWidget(QWidget):
         p.setColor(self.backgroundRole(), QColor(195, 195, 195))
         self.setPalette(p)
 
-        names_font = QFont('Monospace', int(size * 0.25))
-        self.help_label = QLabel(param.help)
+        names_font = QFont('Monospace', int(size * 0.4))
+        self.help_label = QLabel(param.help.ljust(60))
         self.help_label.setWordWrap(True) 
         self.help_label.setFont(names_font)
 
-        self.data_label = QLabel("0".ljust(8), self)
+        self.data_label = QLabel("0".ljust(15), self)
         self.data_label.setFont(QFont('Monospace', size))
 
         self.graph = PlotWidget(self)
@@ -275,7 +275,7 @@ class ReqWidget(QWidget):
 
         # print(self.key, self.y)
 
-        self.data_label.setText(str(result).ljust(8))
+        self.data_label.setText(str(result).ljust(15))
         self.data_line.setData(self.x, self.y)
 
 class ReqWindow(QMainWindow):
