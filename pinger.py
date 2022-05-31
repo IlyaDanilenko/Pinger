@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel, QVBoxLayout, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
-import json, sys, ping3, requests
+import json, sys, ping3, requests, glob
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
@@ -28,6 +28,35 @@ class Param:
     def __init__(self, name, help):
         self.name = name
         self.help = help
+
+class LogThread(Thread):
+    def __init__(self, log_folder, threads):
+        self.__threads = threads
+        self.__run = True
+        super().__init__()
+        self.file_name = f"{log_folder}/{self.get_log_num(log_folder)}.txt"
+    
+    def get_log_num(self, log_folder):
+        return len(glob.glob(log_folder + "/*.txt")) + 1
+
+    def run(self):
+        while self.__run:
+            start = time()
+            values = [thread.result for thread in self.__threads]
+            with open(self.file_name, "a") as f:
+                s = ""
+                for val in values:
+                    if type(val) == dict:
+                        for v in val.values():
+                            s += f" {v}"
+                    else:
+                        s += f" {val}"
+                f.seek(0, 2)
+                f.write(str(time()) + s + "\n")
+            sleep(1 - (time() - start))
+
+    def stop(self):
+        self.__run = False
 
 class PingThread(Thread):
     def __init__(self, ip):
@@ -99,13 +128,14 @@ class RequestThread(Thread):
         self.__run = False
 
 class PingWidget(QWidget):
-    def __init__(self, device, screen, count):
+    def __init__(self, device, screen, count, ping_thread):
         self.__device = device
 
         self.__count = 0
         self.__sum = 0
 
         size = screen.height() // count // 3
+        self.__ping_thread = ping_thread
 
         super().__init__()
 
@@ -134,8 +164,8 @@ class PingWidget(QWidget):
             self.graph.getPlotItem().setAxisItems(new_axis)
         self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
-        self.__ping_thread = PingThread(self.__device.ip)
         self.__ping_thread.start()
+        self.__run = False
 
         self.timer = QTimer()
         self.timer.setInterval(TIME)
@@ -163,9 +193,12 @@ class PingWidget(QWidget):
         self.show()
 
     def __timer_handle(self):
+        while self.__run:
+            pass
         Thread(target=self.update_plot_data).start()
 
     def update_plot_data(self):
+        self.__run = True
         time = self.__ping_thread.result
         if time is None:
             time = TIMEOUT
@@ -190,6 +223,7 @@ class PingWidget(QWidget):
         self.y.append(time)
 
         self.data_line.setData(self.x, self.y)
+        self.__run = False
 
     def __get_ping_str(self, value1, value2, count):
         return str(value1).ljust(count) + " " + str(value2).ljust(count)
@@ -212,6 +246,7 @@ class ReqWidget(QWidget):
         size = screen.height() // count // 8
         self.key = param.name
         self.url_thread = url_thread
+        self.__run = False
 
         super().__init__()
 
@@ -221,7 +256,7 @@ class ReqWidget(QWidget):
         self.setPalette(p)
 
         names_font = QFont('Monospace', int(size * 0.4))
-        self.help_label = QLabel(param.help.ljust(60))
+        self.help_label = QLabel(param.help.ljust(50))
         self.help_label.setWordWrap(True) 
         self.help_label.setFont(names_font)
 
@@ -263,9 +298,12 @@ class ReqWidget(QWidget):
         self.show()
 
     def __timer_handle(self):
+        while self.__run:
+            pass
         Thread(target=self.update_plot_data).start()
 
     def update_plot_data(self):
+        self.__run = True
         result = self.url_thread.result[self.key]
 
         self.x = self.x[1:]
@@ -284,6 +322,7 @@ class ReqWidget(QWidget):
 
         self.data_label.setText(str(result).ljust(13))
         self.data_line.setData(self.x, self.y)
+        self.__run = False
 
 class ReqWindow(QMainWindow):
     def __init__(self, screen, config_file, url):
@@ -316,6 +355,11 @@ class ReqWindow(QMainWindow):
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_1:
             self.hide()
+        elif event.key() == Qt.Key_F:
+            if self.isFullScreen():
+                self.showMaximized()
+            else:
+                self.showFullScreen()
 
     def __load(self, config_file):
         with open(config_file) as f:
@@ -323,12 +367,16 @@ class ReqWindow(QMainWindow):
             for obj in json_data['request']:
                 self.__params.append(Param(**obj))
 
+    def get_thread(self):
+        return self.__thread
+
 class MainWindow(QMainWindow):
     def __init__(self, screen, config_file):
         self.__devices = []
         self.__devices_widget = []
         self.__screen = screen
         self.__load(config_file)
+        self.__ping_threads = []
 
         super().__init__()
 
@@ -339,13 +387,16 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         for device in self.__devices:
-            self.__devices_widget.append(PingWidget(device, self.__screen , len(self.__devices)))
+            self.__ping_threads.append(PingThread(device.ip))
+            self.__devices_widget.append(PingWidget(device, self.__screen , len(self.__devices), self.__ping_threads[-1]))
             layout.addWidget(self.__devices_widget[-1])
 
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
         self.urler = ReqWindow(self.__screen, config_file, URL)
+        self.logger = LogThread("logs", self.__ping_threads + [self.urler.get_thread()])
+        self.logger.start()
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -354,6 +405,7 @@ class MainWindow(QMainWindow):
                 self.__devices_widget[index].close_connection()
             self.urler.close()
             self.urler.close_connection()
+            self.logger.stop()
         elif event.key() == Qt.Key_F:
             if self.isFullScreen():
                 self.showMaximized()
