@@ -55,7 +55,9 @@ class LogThread(Thread):
                         s += f" {val}"
                 f.seek(0, 2)
                 f.write(str(time()) + s + "\n")
-            sleep(1 - (time() - start))
+            end = time()
+            if end - start < 1:
+                sleep(1 - (time() - start))
 
     def stop(self):
         self.__run = False
@@ -70,7 +72,8 @@ class PingThread(Thread):
     def run(self):
         while self.__run:
             self.result, delta = self.get_data()
-            sleep(1 - delta)
+            if delta < 1:
+                sleep(1 - delta)
 
     def get_data(self):
         start = time()
@@ -94,7 +97,8 @@ class RequestThread(Thread):
     def run(self):
         while self.__run:
             self.result, delta = self.get_stat_by_url()
-            sleep(1 - delta)
+            if delta < 1:
+                sleep(1 - delta)
     
     def get_stat_by_url(self):
         result = self.result.copy()
@@ -164,7 +168,7 @@ class PingWidget(QWidget):
         if not SHOW_X_AXIS:
             new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
             self.graph.getPlotItem().setAxisItems(new_axis)
-        # self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
+        self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
         self.__ping_thread.start()
         self.__run = False
@@ -224,8 +228,7 @@ class PingWidget(QWidget):
 
         self.y.append(time)
         
-        self.graph.plot(self.x, self.y, pen=self.pen)
-        # self.data_line.setData(self.x, self.y)
+        self.data_line.setData(self.x, self.y)
         self.__run = False
 
     def __get_ping_str(self, value1, value2, count):
@@ -279,7 +282,7 @@ class ReqWidget(QWidget):
             new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
             self.graph.getPlotItem().setAxisItems(new_axis)
             self.graph.setYRange(0, self.scale_y, padding=0)
-        # self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
+        self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
         self.timer = QTimer()
         self.timer.setInterval(TIME)
@@ -324,8 +327,7 @@ class ReqWidget(QWidget):
         # print(self.key, self.y)
 
         self.data_label.setText(str(result).ljust(13))
-        self.graph.plot(self.x, self.y, pen=self.pen)
-        # self.data_line.setData(self.x, self.y)
+        self.data_line.setData(self.x, self.y)
         self.__run = False
 
 class ReqWindow(QMainWindow):
