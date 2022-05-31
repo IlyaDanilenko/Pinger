@@ -24,6 +24,11 @@ class Device:
         self.name = name
         self.ip = ip
 
+class Param:
+    def __init__(self, name, help):
+        self.name = name
+        self.help = help
+
 class PingThread(Thread):
     def __init__(self, ip):
         self.result = TIMEOUT
@@ -47,10 +52,10 @@ class PingThread(Thread):
         self.__run = False
 
 class RequestThread(Thread):
-    def __init__(self, url, config_names):
+    def __init__(self, url, params):
         self.result = {}
-        for name in config_names:
-            self.result[name] = 0
+        for param in params:
+            self.result[param.name] = 0
         self.url = url
         self.__run = True
         super().__init__()
@@ -68,13 +73,27 @@ class RequestThread(Thread):
             for key in self.result.keys():
                 for _, value in res.items():
                     try:
-                        result[key] = value[key]
+                        result[key] = int(value[key])
                         break
                     except:
                         pass
         except:
             pass
         return result, time() - start
+
+    # def get_stat_by_url(self):
+    #     result = self.result.copy()
+    #     start = time()
+    #     with open("test.json", "r") as f:
+    #         res = json.load(f)
+    #         for key in self.result.keys():
+    #             for _, value in res.items():
+    #                 try:
+    #                     result[key] = int(value[key])
+    #                     break
+    #                 except:
+    #                     pass
+    #     return result, time() - start
 
     def stop(self):
         self.__run = False
@@ -188,15 +207,23 @@ class PingWidget(QWidget):
         self.__ping_thread.stop()
 
 class ReqWidget(QWidget):
-    def __init__(self, url_thread, key, screen, count):
-        size = screen.height() // count // 12
-        self.key = key
+    def __init__(self, url_thread, param, screen, count):
+        size = screen.height() // count // 8
+        self.key = param.name
         self.url_thread = url_thread
 
         super().__init__()
-        names_font = QFont('Monospace', int(size))
-        self.name_label = QLabel(key.ljust(20))
-        self.name_label.setFont(names_font)
+
+        self.setAutoFillBackground(True)
+        p = self.palette()
+        p.setColor(self.backgroundRole(), QColor(195, 195, 195))
+        self.setPalette(p)
+
+        names_font = QFont('Monospace', int(size * 0.25))
+        self.param_label = QLabel(self.key.ljust(64))
+        self.param_label.setFont(names_font)
+        self.help_label = QLabel(param.help.ljust(64))
+        self.help_label.setFont(names_font)
 
         self.data_label = QLabel("0".ljust(4), self)
         self.data_label.setFont(QFont('Monospace', size))
@@ -222,9 +249,16 @@ class ReqWidget(QWidget):
 
         w = QWidget()
         w_layout = QGridLayout(w)
-        w_layout.addWidget(self.name_label, 0, 0)
-        w_layout.addWidget(self.data_label, 0, 1)
         w.setLayout(w_layout)
+        w1 = QWidget()
+        name_layout = QGridLayout(w1)
+        w1.setLayout(name_layout)
+
+        name_layout.addWidget(self.param_label, 0, 0)
+        name_layout.addWidget(self.help_label, 1, 0)
+
+        w_layout.addWidget(w1, 0, 0)
+        w_layout.addWidget(self.data_label, 0, 1)
 
         main_layout = QGridLayout(self)
         main_layout.addWidget(w, 0, 0)
@@ -238,6 +272,7 @@ class ReqWidget(QWidget):
 
     def update_plot_data(self):
         result = self.url_thread.result[self.key]
+
         self.x = self.x[1:]
         self.x.append(self.x[-1] + 1)
 
@@ -252,8 +287,10 @@ class ReqWindow(QMainWindow):
     def __init__(self, screen, config_file, url):
         super().__init__()
         self.__screen = screen
+        self.__params = []
+        self.__load(config_file)
         self.__graph_widgets = []
-        self.__thread = RequestThread(url, self.get_names_from_config(config_file))
+        self.__thread = RequestThread(url, self.__params)
         self.__thread.start()
 
         self.setGeometry(self.__screen )
@@ -263,8 +300,8 @@ class ReqWindow(QMainWindow):
 
         layout = QVBoxLayout()
 
-        for key in self.__thread.result.keys():
-            self.__graph_widgets.append(ReqWidget(self.__thread, key, screen, len(self.__thread.result)))
+        for param in self.__params:
+            self.__graph_widgets.append(ReqWidget(self.__thread, param, screen, len(self.__params)))
             layout.addWidget(self.__graph_widgets[-1])
 
         widget.setLayout(layout)
@@ -278,18 +315,18 @@ class ReqWindow(QMainWindow):
         if event.key() == Qt.Key_1:
             self.hide()
 
-    def get_names_from_config(self, config_file):
+    def __load(self, config_file):
         with open(config_file) as f:
-            return json.load(f)['request']
-
+            json_data = json.load(f)
+            for obj in json_data['request']:
+                self.__params.append(Param(**obj))
 
 class MainWindow(QMainWindow):
     def __init__(self, screen, config_file):
-        self.__config_file = config_file
         self.__devices = []
         self.__devices_widget = []
         self.__screen = screen
-        self.__load()
+        self.__load(config_file)
 
         super().__init__()
 
@@ -326,8 +363,8 @@ class MainWindow(QMainWindow):
         elif event.key() == Qt.Key_1:
             self.urler.show()
 
-    def __load(self):
-        with open(self.__config_file) as f:
+    def __load(self, config_file):
+        with open(config_file) as f:
             json_data = json.load(f)
             for obj in json_data['ping']:
                 self.__devices.append(Device(**obj))

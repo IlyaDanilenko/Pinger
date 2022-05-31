@@ -2,37 +2,55 @@
     "ping":
     [
         {
-            "name": "google",
-            "ip": "google.com"
+            "name": "pioneer1",
+            "ip": "10.10.1.86"
         },
         {
-            "name": "not_exist",
-            "ip": "not.exist.com"
+            "name": "pioneer2",
+            "ip": "10.10.0.88"
         },
         {
-            "name": "kek",
-            "ip": "127.0.0.1"
+            "name": "pioneer3",
+            "ip": "10.10.0.116"
         },
         {
-            "name": "kek1",
-            "ip": "192.1.1.1"
+            "name": "pioneer4",
+            "ip": "10.10.0.255"
         },
         {
-            "name": "kek",
-            "ip": "127.0.0.1"
+            "name": "edubot1",
+            "ip": "10.10.1.35"
         },
         {
-            "name": "kek",
-            "ip": "127.0.0.1"
+            "name": "edubot2",
+            "ip": "10.10.1.41"
         },
         {
-            "name": "kek",
-            "ip": "127.0.0.1"
+            "name": "edubot3",
+            "ip": "10.10.1.2"
         },
         {
-            "name": "kek",
-            "ip": "127.0.0.1"
+            "name": "edubot4",
+            "ip": "10.10.1.33"
         }
     ],
-    "request": ["streams_webrtc_out", "streams_rtsp_in", "connections"]
+    "request":
+    [
+        {
+            "name": "streams_webrtc_out",
+            "help": "Количество активных потоков, воспроизводимых через WebRTC"
+        },
+        {
+            "name": "streams_rtsp_in",
+            "help": "Количество активных RTSP-сессий, раздающих трафик"
+        },
+        {
+            "name": "connections",
+            "help": "Общее количество соединений"
+        },
+        {
+            "name": "ports_media_free",
+            "help": "Количество свободных медиапортов"
+        }
+    ]
 }
