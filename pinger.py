@@ -34,7 +34,7 @@ class LogThread(Thread):
         self.__threads = threads
         self.__run = True
         super().__init__()
-        self.file_name = f"{log_folder}/{self.get_log_num(log_folder)}.txt"
+        self.file_name = f"{log_folder}/log_{self.get_log_num(log_folder)}.txt"
     
     def get_log_num(self, log_folder):
         return len(glob.glob(log_folder + "/*.txt")) + 1
