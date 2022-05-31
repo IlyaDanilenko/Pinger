@@ -207,7 +207,8 @@ class PingWidget(QWidget):
         self.__ping_thread.stop()
 
 class ReqWidget(QWidget):
-    def __init__(self, url_thread, param, screen, count):
+    def __init__(self, url_thread, param, screen, count, scale_y):
+        self.scale_y = scale_y
         size = screen.height() // count // 8
         self.key = param.name
         self.url_thread = url_thread
@@ -239,6 +240,7 @@ class ReqWidget(QWidget):
         if not SHOW_X_AXIS:
             new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
             self.graph.getPlotItem().setAxisItems(new_axis)
+            self.graph.setYRange(0, self.scale_y, padding=0)
         self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
         self.timer = QTimer()
@@ -272,6 +274,11 @@ class ReqWidget(QWidget):
         self.y = self.y[1:]
 
         self.y.append(result)
+        max_y = max(self.y)
+        if max_y > self.scale_y:
+            self.graph.setYRange(0, max_y, padding=0)
+        else:
+            self.graph.setYRange(0, self.scale_y, padding=0)
 
         # print(self.key, self.y)
 
@@ -296,7 +303,7 @@ class ReqWindow(QMainWindow):
         layout = QVBoxLayout()
 
         for param in self.__params:
-            self.__graph_widgets.append(ReqWidget(self.__thread, param, screen, len(self.__params)))
+            self.__graph_widgets.append(ReqWidget(self.__thread, param, screen, len(self.__params), 200))
             layout.addWidget(self.__graph_widgets[-1])
 
         widget.setLayout(layout)
