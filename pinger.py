@@ -3,7 +3,9 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QLabel, QVBoxLayout, QMainWindow
 from pyqtgraph import PlotWidget, AxisItem, mkPen
 from threading import Thread
-import json, sys, ping3, requests, glob
+import json, sys, ping3
+from glob import glob
+from requests import get
 from time import sleep, time
 ping3.EXCEPTIONS = True
 
@@ -37,7 +39,7 @@ class LogThread(Thread):
         self.file_name = f"{log_folder}/log_{self.get_log_num(log_folder)}.txt"
     
     def get_log_num(self, log_folder):
-        return len(glob.glob(log_folder + "/*.txt")) + 1
+        return len(glob(log_folder + "/*.txt")) + 1
 
     def run(self):
         while self.__run:
@@ -98,7 +100,7 @@ class RequestThread(Thread):
         result = self.result.copy()
         start = time()
         try:
-            res = json.loads(requests.get(self.url, timeout=TIMEOUT * 0.001).text)
+            res = json.loads(get(self.url, timeout=TIMEOUT * 0.001).text)
             for key in self.result.keys():
                 for _, value in res.items():
                     try:
@@ -162,7 +164,7 @@ class PingWidget(QWidget):
         if not SHOW_X_AXIS:
             new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
             self.graph.getPlotItem().setAxisItems(new_axis)
-        self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
+        # self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
         self.__ping_thread.start()
         self.__run = False
@@ -221,8 +223,9 @@ class PingWidget(QWidget):
         self.y = self.y[1:]
 
         self.y.append(time)
-
-        self.data_line.setData(self.x, self.y)
+        
+        self.graph.plot(self.x, self.y, pen=self.pen)
+        # self.data_line.setData(self.x, self.y)
         self.__run = False
 
     def __get_ping_str(self, value1, value2, count):
@@ -276,7 +279,7 @@ class ReqWidget(QWidget):
             new_axis = {"bottom":AxisItem(orientation='bottom', showValues=False, pen=mkPen(color=GRAPHIC_COLOR, width=3)), "left":self.graph.getPlotItem().getAxis('left')}
             self.graph.getPlotItem().setAxisItems(new_axis)
             self.graph.setYRange(0, self.scale_y, padding=0)
-        self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
+        # self.data_line =  self.graph.plot(self.x, self.y, pen=self.pen)
 
         self.timer = QTimer()
         self.timer.setInterval(TIME)
@@ -321,7 +324,8 @@ class ReqWidget(QWidget):
         # print(self.key, self.y)
 
         self.data_label.setText(str(result).ljust(13))
-        self.data_line.setData(self.x, self.y)
+        self.graph.plot(self.x, self.y, pen=self.pen)
+        # self.data_line.setData(self.x, self.y)
         self.__run = False
 
 class ReqWindow(QMainWindow):
