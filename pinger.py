@@ -431,6 +431,8 @@ class MainWindow(QMainWindow):
                 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ping = MainWindow(app.desktop().screenGeometry(), "config/config.json")
+    screen = app.desktop().screenGeometry()
+    screen.setHeight(screen.height() - 200)
+    ping = MainWindow(screen, "config/config.json")
     ping.show()
     sys.exit(app.exec_())
